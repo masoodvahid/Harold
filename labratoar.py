@@ -1,47 +1,20 @@
-from Harold import Harold
-import json
-Market = {"Catalx":
-            {"BTC":
-                 {"ASKS": {12562.32: 0.025, 11526: 0.01, 18000: 1.51, 12500: 0.31, 90000: 0.01},
-                  "BIDS": {12562.32: 0.025, 11526: 0.01, 18000: 1.51, 12500: 0.31, 90000: 0.01}},
-             "ETH":
-                 {"ASKS": {12562.32: 0.025, 11526: 0.01, 18000: 1.51, 12500: 0.31, 90000: 0.01},
-                  "BIDS": {12562.32: 0.025, 11526: 0.01, 18000: 1.51, 12500: 0.31, 90000: 0.01}}
-            },
-          "Kraken":
-            {"BTC":
-                 {"ASKS": {12562.32: 0.025, 11526: 0.01, 18000: 1.51, 12500: 0.31, 90000: 0.01},
-                  "BIDS": {12562.32: 0.025, 11526: 0.01, 18000: 1.51, 12500: 0.31, 90000: 0.01}},
-             "ETH":
-                 {"ASKS": {12562.32: 0.025, 11526: 0.01, 18000: 1.51, 12500: 0.31, 90000: 0.01},
-                  "BIDS": {12562.32: 0.025, 11526: 0.01, 18000: 1.51, 12500: 0.31, 90000: 0.01}}
-            }
-        }
+# URL = 'https://api.telegram.org/bot{}/'.format(TOKEN)
+import telebot
 
-# Market = {"BTC":
-#               {"Catalx": {"ASKS": {12562.32: 0.025, 11526: 0.01, 18000: 1.51, 12500: 0.31, 90000: 0.01},
-#                           "BIDS": {12562.32: 0.025, 11526: 0.01, 18000: 1.53, 12500: 0.31, 90000: 0.01}},
-#                "Kraken": {"ASKS": {12562.32: 0.025, 11526: 0.01, 18000: 1.5, 12500: 0.31, 9000: 0.01},
-#                           "BIDS": {12562.32: 0.025, 11526: 0.01, 18000: 1.5, 12500: 0.31, 9000: 0.01}}}
-#          }
+API_TOKEN = '947961339:AAGgvcMJffgrUoiscWWC_6QI6TuYaTQpGmI'
+bot = telebot.TeleBot(API_TOKEN)
+# 95746722
 
-bids = {
-        "Catalx":
-            {
-                "BTC": {12562.32: 0.025, 11526: 0.01, 18000: 1.51, 12500: 0.31, 90000: 0.01},
-                "ETH": {12562.32: 0.025, 11526: 0.01, 18000: 1.53, 12500: 0.31, 90000: 0.01}
-            },
-        "Kraken":
-            {
-                "BTC": {12562.32: 0.025, 11526: 0.01, 18000: 1.5, 12500: 0.31, 9000: 0.01},
-                "ETH": {12562.32: 0.025, 11526: 0.01, 18000: 1.5, 12500: 0.31, 9000: 0.01}
-            }
-        }
+@bot.message_handler(commands=['start', 'help'])
+def send_welcome(message):
+    bot.reply_to(message, "CRYPTO TRIGGER V 0.7 started")
 
-averages = {"Catalx": {"BTC": {"ASK_AVG": 12562, "BID_AVG": 12666}, "ETH": {"ASK_AVG": 12562, "BID_AVG": 12666}},
-            "Kraken": {"BTC": {"ASK_AVG": 12562, "BID_AVG": 12666}, "ETH": {"ASK_AVG": 12562, "BID_AVG": 12666}}}
+@bot.message_handler(commands=['notifyme'])
+def send_echo(message):
+    bot.reply_to(message, "OK. you added to our list..., your ID is {}")
 
-a = Harold.averager(Market)
+bot.send_message('95746722', 'Bingooooo')
 
+bot.polling()
 
-print(json.dumps(a))
+# user = bot.get_me()

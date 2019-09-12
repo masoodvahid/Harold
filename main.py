@@ -6,8 +6,8 @@
 #                        #
 ##########################
 
-# Version     : 0.61
-# Last Update : 2019.07.26
+# Version     : 1.2
+# Last Update : 2019.09.12
 # Git         : none
 # Author      : Masood Vahid
 # Supporter   : Hadi Rahavi
@@ -33,12 +33,31 @@ from selenium.common import exceptions
 # Database connection
 # if Database Connection failed, every thing failed :)
 # from config import LocalDB
-from Harold import LocalDB
-from Harold import Harold
+from Harold import *
 from mysql.connector import Error
 
-# Day Cycle
-for cycle_in_days in range(1, 12):
+#######################
+#                     #
+#     APP CONFIGS     #
+#                     #
+#######################
+delay_between_each_try = 5               # minutes
+delay_between_exchange_rate_update = 10  # minutes
+check_margin_period = 1800
+k_to_c_alarm_margin = 0
+c_to_k_alarm_margin = 0
+raise_span_alarm = 0.2
+error_report_id = '95746722'
+good_margin_report_id = '108521416'
+
+
+#####################
+#                   #
+#     MAIN LOOP     #
+#                   #
+#####################
+
+while True:
     today = str(datetime.now().strftime('%Y%m%d'))
     try:
         db = mysql.connector.connect(host=LocalDB.host,
@@ -56,6 +75,7 @@ for cycle_in_days in range(1, 12):
                           "(id int(11) NOT NULL AUTO_INCREMENT, " \
                           "markets text DEFAULT NULL COMMENT 'json'," \
                           "averages text DEFAULT NULL COMMENT 'asks and bids average'," \
+                          "exchange_rate float DEFAULT 1 COMMENT 'USD to CAD exchange rate'," \
                           "submitted_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP," \
                           "PRIMARY KEY (id))"""
             database.execute(sql_command)
@@ -68,25 +88,30 @@ for cycle_in_days in range(1, 12):
         browserOne = webdriver.Chrome()
         browserOne.get("https://catalx.io/trade/CAD-BTC")
         browserOne.implicitly_wait(30)
+        # Click on USD(  O)CAD on page
+        WebDriverWait(browserOne, 4).until(ec.presence_of_element_located((By.XPATH, "//div[@class='slider round']"))).click()
+
         # CAD-ETH
         browserTwo = webdriver.Chrome()
         browserTwo.get('https://catalx.io/trade/CAD-ETH')
         browserTwo.implicitly_wait(30)
+        # Click on USD(  O)CAD on page
+        WebDriverWait(browserTwo, 4).until(ec.presence_of_element_located((By.XPATH, "//div[@class='slider round']"))).click()
+        time.sleep(2)
+
 
         # Using Try-Except structure to avoid collapse
         # when App doesnt load Correctly
+
         try:
             # K for count failed iteration
             # show in terminal last line at end of process
             k = 0
-            # j is number of scraping in each Browser session
-            # notice : TimeOutExceptionError may occur in long session
-            # Prefer to keep it under 5 minutes
-            for j in range(1, 550):
-
+            is_first_time = True
+            while True:
                 # Just for terminal.
                 # Database time submitted by MySQL automatically
-                print(str(j) + ' ==> ' + str(datetime.now().strftime('%H:%M:%S')))
+                print(str(datetime.now().strftime('%H:%M:%S')))
                 Market = {"Kraken": {"BTC": {"ASKS": {}, "BIDS": {}}, "ETH": {"ASKS": {}, "BIDS": {}}},
                           "Catalx": {"BTC": {"ASKS": {}, "BIDS": {}}, "ETH": {"ASKS": {}, "BIDS": {}}}}
 
@@ -95,18 +120,18 @@ for cycle_in_days in range(1, 12):
                 #    USD-XChange    #
                 #                   #
                 #####################
-                # try:
-                #     bitcad = urllib.request.urlopen('https://api.kraken.com/0/public/Depth?pair=xbtcad&count=10').read(1000)
-                # except urllib.error.HTTPError as e:
-                #     print('Error code: ', e.code)
-                # except urllib.error.URLError as e:
-                #     print('Reason: ', e.reason)
-                # else:
-                #     kraken = json.loads(bitcad.decode())
-                #     for i in range(10):
-                #         kraken_asks[i + 1] = float(kraken['result']['XXBTZCAD']['asks'][i][0])
-                #         kraken_bids[i + 1] = float(kraken['result']['XXBTZCAD']['bids'][i][0])
-                #         print('Kraken (' + str(i+1) + ')  BID : ' + str(kraken_bids[i + 1]) + ' |||  ASK : ' + str(kraken_asks[i + 1]))
+
+                if is_first_time is True or (int(datetime.now().strftime('%M')) != 0 and int(datetime.now().strftime('%M')) % delay_between_exchange_rate_update == 0):
+                    is_first_time = False
+                    try:
+                        USD = urllib.request.urlopen(
+                            'https://free.currconv.com/api/v7/convert?q=USD_CAD&compact=ultra&apiKey=ab427304e1560200272b').read(
+                            1000)
+                        usd = json.loads(USD.decode())
+                        exchange_rate = float(usd['USD_CAD'])
+                        print('USD-CAD Exchange rate = ', exchange_rate)
+                    except Exception as e:
+                        Harold.crash_reporter(error_report_id, '⚠ USD-CAD Exchange rate api has error %s' % e)
 
                 #####################
                 #                   #
@@ -116,21 +141,27 @@ for cycle_in_days in range(1, 12):
                 try:
                     bitcad = urllib.request.urlopen('https://api.kraken.com/0/public/Depth?pair=xbtcad&count=10').read(1000)
                     ethcad = urllib.request.urlopen('https://api.kraken.com/0/public/Depth?pair=ethcad&count=10').read(1000)
-                except urllib.error.HTTPError as e:
-                    print('Error code: ', e.code)
-                except urllib.error.URLError as e:
-                    print('Reason: ', e.reason)
-                else:
+                # except urllib.error.HTTPError as e:
+                #     # print('Error code: ', e.code)
+                #     Harold.crash_reporter(error_report_id, '⚠ Kraken Connection Error (HTTP Error) Occurred')
+                # except urllib.error.URLError as e:
+                #     # print('Reason: ', e.reason)
+                #     Harold.crash_reporter(error_report_id, '⚠ Kraken Connection Error (URL Error) Occurred')
                     kraken_btc = json.loads(bitcad.decode())
                     kraken_eth = json.loads(ethcad.decode())
                     for i in range(10):
-                        Market['Kraken']['BTC']['ASKS'][float(kraken_btc['result']['XXBTZCAD']['asks'][i][0])] = float(kraken_btc['result']['XXBTZCAD']['asks'][i][1])
-                        Market['Kraken']['BTC']['BIDS'][float(kraken_btc['result']['XXBTZCAD']['bids'][i][0])] = float(kraken_btc['result']['XXBTZCAD']['bids'][i][1])
-                        Market['Kraken']['ETH']['ASKS'][float(kraken_eth['result']['XETHZCAD']['asks'][i][0])] = float(kraken_eth['result']['XETHZCAD']['asks'][i][1])
-                        Market['Kraken']['ETH']['BIDS'][float(kraken_eth['result']['XETHZCAD']['bids'][i][0])] = float(kraken_eth['result']['XETHZCAD']['bids'][i][1])
-
+                        Market['Kraken']['BTC']['ASKS'][float(kraken_btc['result']['XXBTZCAD']['asks'][i][0])] = float(
+                            kraken_btc['result']['XXBTZCAD']['asks'][i][1])
+                        Market['Kraken']['BTC']['BIDS'][float(kraken_btc['result']['XXBTZCAD']['bids'][i][0])] = float(
+                            kraken_btc['result']['XXBTZCAD']['bids'][i][1])
+                        Market['Kraken']['ETH']['ASKS'][float(kraken_eth['result']['XETHZCAD']['asks'][i][0])] = float(
+                            kraken_eth['result']['XETHZCAD']['asks'][i][1])
+                        Market['Kraken']['ETH']['BIDS'][float(kraken_eth['result']['XETHZCAD']['bids'][i][0])] = float(
+                            kraken_eth['result']['XETHZCAD']['bids'][i][1])
                     # print(json.dumps(Market))  # For Debugging
-
+                except Exception as e:
+                    Harold.crash_reporter(error_report_id, '⚠ Kraken Connection Error %s' % e)
+                    print('Error : ', e)
 
                 #####################
                 #                   #
@@ -140,25 +171,24 @@ for cycle_in_days in range(1, 12):
                 # Scrapping started from here
                 # i Is number of elements in each page
 
-                def fetcher(browser,order):
-                    ask = WebDriverWait(browser, 0.1).until(ec.presence_of_element_located((By.XPATH, "//tr[@class='price-level'][" + str(i) + "]//td[@class='ask-price']")))
+                def fetcher(browser, order):
                     if order == 'ASKS':
                         ask = WebDriverWait(browser, 0.1).until(ec.presence_of_element_located((By.XPATH, "//tr[@class='price-level'][" + str(i) + "]//td[@class='ask-price']")))
-                        ask_volume = WebDriverWait(browser, 0.1).until(ec.presence_of_element_located((By.XPATH,"//table[contains(@class, 'asks-table')]//tr[@class='price-level'][" + str(i) + "]//td[2]")))
-                        output = {1: float(ask.text), 2: float(ask_volume.text)}
+                        ask_volume = WebDriverWait(browser, 0.1).until(ec.presence_of_element_located((By.XPATH, "//table[contains(@class, 'asks-table')]//tr[@class='price-level'][" + str(i) + "]//td[2]")))
+                        output = {1: round(float(ask.text) * exchange_rate, 3), 2: float(ask_volume.text)}
                     elif order == 'BIDS':
                         bid = WebDriverWait(browser, 0.1).until(ec.presence_of_element_located((By.XPATH, "//tr[@class='price-level'][" + str(i) + "]//td[@class='bid-price']")))
-                        bid_volume = WebDriverWait(browser, 0.1).until(ec.presence_of_element_located((By.XPATH,"//table[contains(@class, 'bids-table')]//tr[@class='price-level'][" + str(i) + "]//td[3]")))
-                        output = {1: float(bid.text), 2: float(bid_volume.text)}
+                        bid_volume = WebDriverWait(browser, 0.1).until(ec.presence_of_element_located((By.XPATH, "//table[contains(@class, 'bids-table')]//tr[@class='price-level'][" + str(i) + "]//td[3]")))
+                        output = {1: round(float(bid.text) * exchange_rate, 3), 2: float(bid_volume.text)}
                     else:
                         output = {1: '', 2: ''}
                     return output
 
                 for i in range(1, 11):
                     # Try again to fetch elements (defult = 5 time then except it)
-                    cycle = 0
+                    cycle1 = 0
                     # Get BTC
-                    for cylce1 in range(5):
+                    for cycle1 in range(1,10):
                         try:
                             output = fetcher(browserOne, 'ASKS')
                             Market["Catalx"]["BTC"]["ASKS"][output[1]] = output[2]
@@ -174,11 +204,11 @@ for cycle_in_days in range(1, 12):
 
                             break
                         except exceptions.StaleElementReferenceException as e:
-                            print('try', i, ':', cycle, 'Element Stale')
-                            k = k + 1
+                            print('try', i, ':', cycle1, 'Element Stale')
+                            cycle1 = cycle1 + 1
                         except exceptions.TimeoutException as e:
-                            print('try', i, ':', cycle, ' Element Timeout')
-                            k = k + 1
+                            print('try', i, ':', cycle1, ' Element Timeout')
+                            cycle1 = cycle1 + 1
 
                 #####################
                 #                   #
@@ -189,10 +219,14 @@ for cycle_in_days in range(1, 12):
                 if len(Market["Catalx"]["BTC"]["ASKS"]) < 5 or len(Market["Catalx"]["BTC"]["BIDS"]) < 5 or len(Market["Catalx"]["ETH"]["ASKS"]) < 5 or len(Market["Catalx"]["ETH"]["BIDS"]) < 5:
                     print('Minimum fetched items (5) cant retrive in this try. Catalx[BTC][ASKS]:', len(Market["Catalx"]["BTC"]["ASKS"]))
                 else:
-                    print('\n Fetched Catalx[BTC][ASKS]:', len(Market["Catalx"]["BTC"]["ASKS"]),
-                          '\n Fetched Catalx[BTC][BIDS]:', len(Market["Catalx"]["BTC"]["BIDS"]),
-                          '\n Fetched Catalx[ETH][ASKS]:', len(Market["Catalx"]["ETH"]["ASKS"]),
-                          '\n Fetched Catalx[ETH][BIDS]:', len(Market["Catalx"]["ETH"]["BIDS"]))
+                    table = PrettyTable(['','BTC Kraken', 'BTC Catalx', 'ETH Kraken', 'ETH Catalx'])
+                    table.add_row(['Fetched Asks', len(Market["Kraken"]["BTC"]["ASKS"]), len(Market["Catalx"]["BTC"]["ASKS"]), len(Market["Kraken"]["ETH"]["ASKS"]), len(Market["Catalx"]["ETH"]["ASKS"])])
+                    table.add_row(['Fetched Bids', len(Market["Kraken"]["BTC"]["BIDS"]), len(Market["Catalx"]["BTC"]["BIDS"]), len(Market["Kraken"]["ETH"]["BIDS"]), len(Market["Catalx"]["ETH"]["BIDS"])])
+                    print(table)
+                    # print('\n Fetched Catalx[BTC][ASKS]:', len(Market["Catalx"]["BTC"]["ASKS"]),
+                    #       '\n Fetched Catalx[BTC][BIDS]:', len(Market["Catalx"]["BTC"]["BIDS"]),
+                    #       '\n Fetched Catalx[ETH][ASKS]:', len(Market["Catalx"]["ETH"]["ASKS"]),
+                    #       '\n Fetched Catalx[ETH][BIDS]:', len(Market["Catalx"]["ETH"]["BIDS"]))
                     # print(json.dumps(Market))     # For Debuging
                     average = Harold.averager(Market)
                     JsonMarkets = json.dumps(Market)
@@ -204,20 +238,49 @@ for cycle_in_days in range(1, 12):
                                                      password=LocalDB.password)
 
                     database = db.cursor()
-                    sql_cat = "INSERT INTO `" + today + "` ""(markets, averages) VALUES (%s, %s)"
-                    val_cat = (JsonMarkets, JsonAverages)
+                    sql_cat = "INSERT INTO `" + today + "`""(markets, averages, exchange_rate) VALUES (%s, %s, %s)"
+                    val_cat = (JsonMarkets, JsonAverages, exchange_rate)
 
                     try:
                         database.execute(sql_cat, val_cat)
                         database.execute('COMMIT')
-                        print('Market and averages Submited in Database')
+                        # print('Market and averages Submitted in Database')
+                        print('✔')
                     except Error as e:
                         print("Error while Inserting to DB", e)
                         database.close()
                     database.close()
-                    time.sleep(4)
 
+                    #####################
+                    #                   #
+                    #      SENDING      #
+                    #      MESSAGE      #
+                    #                   #
+                    #####################
+                    # message to be sent
 
+                    btc_ck = Harold.spaner(average['Catalx']['BTC']['ASKS'], average['Kraken']['BTC']['BIDS'])
+                    btc_kc = Harold.spaner(average['Kraken']['BTC']['ASKS'], average['Catalx']['BTC']['BIDS'])
+                    eth_ck = Harold.spaner(average['Catalx']['ETH']['ASKS'], average['Kraken']['ETH']['BIDS'])
+                    eth_kc = Harold.spaner(average['Kraken']['ETH']['ASKS'], average['Catalx']['ETH']['BIDS'])
+                    max_spans = max(btc_ck, btc_kc, eth_ck, eth_kc)
+
+                    if 'old_max_spans' not in vars():
+                        old_max_span = max(0, 0, 0, 0)
+                    else:
+                        old_max_span = max_spans
+
+                    if 'last_message_time' not in vars() or (time.time() - last_message_time) > check_margin_period or (max_spans - old_max_span) > raise_span_alarm:
+                        Harold.alerter(c_to_k_alarm_margin, btc_ck, 'BTC C->K')
+                        Harold.alerter(k_to_c_alarm_margin, btc_kc, 'BTC K->C')
+                        Harold.alerter(c_to_k_alarm_margin, eth_ck, 'ETH C->K')
+                        Harold.alerter(k_to_c_alarm_margin, eth_kc, 'ETH K->C')
+                        last_message_time = time.time()
+                        goal = PrettyTable(['', 'BTC', 'ETH'])
+                        goal.add_row(['C-K', btc_ck, eth_ck])
+                        goal.add_row(['K-C', btc_kc, eth_kc])
+                        print(goal)
+                    time.sleep(delay_between_each_try)
         finally:
             browserOne.close()
             browserTwo.close()
@@ -229,9 +292,11 @@ for cycle_in_days in range(1, 12):
         print("Error while connecting to MySQL", e)
 
     finally:
+        Harold.crash_reporter(error_report_id, '⚠ Crypto Trigger has just shut down. Please Check Server')
         if db.is_connected():
             database.close()
             db.close()
-            print("MySQL connection is closed")
-
-    time.sleep(10)
+        browserOne.close()
+        browserTwo.close()
+        browserOne.quit()
+        browserTwo.quit()

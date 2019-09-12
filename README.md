@@ -1,6 +1,15 @@
 # Harold
 Crypto Trigger for Catalx and Kraken Source
 
+# v 0.7
+published in : **_2019.08.05_**
+~~~~
+- Improve Code Stabality
+- Check date and re run after 24 houres
+- Handle some crash error
+- Convert CAD to USD and give USD exchange rate from api
+~~~~
+
 # v 0.6
 published in : **_2019.07.26_**
 ~~~~
@@ -17,6 +26,3 @@ published in : **_2019.07.25_**
 - Update DB structures for improve performance
 <<<<<<< HEAD
 ~~~~
-=======
-~~~~
->>>>>>> 5882683c1fe3e1a9692c2c29efc85e4197ee7378
