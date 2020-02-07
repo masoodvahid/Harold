@@ -15,6 +15,16 @@ class LocalDB:
 
 
 class Harold:
+    def dbcreator(date):
+        sql_command = "CREATE TABLE IF NOT EXISTS `" + date + "` """ \
+                       "(id int(11) NOT NULL AUTO_INCREMENT, " \
+                       "markets text DEFAULT NULL COMMENT 'json'," \
+                       "averages text DEFAULT NULL COMMENT 'asks and bids average'," \
+                       "exchange_rate float DEFAULT 1 COMMENT 'USD to CAD exchange rate'," \
+                       "submitted_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP," \
+                       "PRIMARY KEY (id))"""
+        return sql_command
+
     def averager(market):
         output = {}
         average = 0
@@ -56,10 +66,9 @@ class Harold:
     def alerter(refrence_margin, span, market):
         if span > refrence_margin:
             bot = telebot.TeleBot(API_TOKEN)
-            if span > refrence_margin:
-                message = '💥 %s = %s ' % (market, span)
-                bot.send_message(error_report_id, message)
-                bot.send_message(good_margin_report_id, message)
+            message = '💥 %s = %s ' % (market, span)
+            bot.send_message(error_report_id, message)
+            bot.send_message(good_margin_report_id, message)
 
     def crash_reporter(reciver_id, message):
         bot = telebot.TeleBot(API_TOKEN)
