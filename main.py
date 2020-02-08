@@ -6,9 +6,9 @@
 #                        #
 ##########################
 
-# Version     : 1.21
-# Last Update : 2019.09.27
-# Git         : none
+# Version     : 1.40
+# Last Update : 2020.02.08
+# Git         : Masoodvahid/harold
 # Author      : Masood Vahid
 # Supporter   : Hadi Rahavi
 
@@ -69,7 +69,7 @@ try:
     browserOne.implicitly_wait(30)
     # Click on USD(  O)CAD on page
     WebDriverWait(browserOne, 10).until(
-        ec.presence_of_element_located((By.XPATH, "//div[@class='slider round']"))).click()
+        ec.presence_of_element_located((By.XPATH, "//div[starts-with(@class,'local_switch_')]"))).click()
 
     # CAD-ETH
     browserTwo = webdriver.Chrome()
@@ -77,7 +77,7 @@ try:
     browserTwo.implicitly_wait(30)
     # Click on USD(  O)CAD on page
     WebDriverWait(browserTwo, 10).until(
-        ec.presence_of_element_located((By.XPATH, "//div[@class='slider round']"))).click()
+        ec.presence_of_element_located((By.XPATH, "//div[starts-with(@class,'local_switch_')]"))).click()
     time.sleep(2)
 except:
     Harold.crash_reporter(error_report_id, '💾 ChromeDriver Error')
@@ -185,17 +185,15 @@ try:
         def fetcher(browser, order):
             if order == 'ASKS':
                 ask = WebDriverWait(browser, 0.1).until(ec.presence_of_element_located(
-                    (By.XPATH, "//tr[@class='price-level'][" + str(i) + "]//td[@class='ask-price']")))
-                ask_volume = WebDriverWait(browser, 0.1).until(ec.presence_of_element_located((By.XPATH,
-                                                                                               "//table[contains(@class, 'asks-table')]//tr[@class='price-level'][" + str(
-                                                                                                   i) + "]//td[2]")))
+                    (By.XPATH, "//table[contains(@class, 'asks-table')]//tr[" + str(i) + "]//td[1]")))
+                ask_volume = WebDriverWait(browser, 0.1).until(ec.presence_of_element_located(\
+                    (By.XPATH, "//table[contains(@class, 'asks-table')]//tr[" + str(i) + "]//td[2]")))
                 output = {1: round(float(ask.text) * exchange_rate, 3), 2: float(ask_volume.text)}
             elif order == 'BIDS':
                 bid = WebDriverWait(browser, 0.1).until(ec.presence_of_element_located(
-                    (By.XPATH, "//tr[@class='price-level'][" + str(i) + "]//td[@class='bid-price']")))
-                bid_volume = WebDriverWait(browser, 0.1).until(ec.presence_of_element_located((By.XPATH,
-                                                                                               "//table[contains(@class, 'bids-table')]//tr[@class='price-level'][" + str(
-                                                                                                   i) + "]//td[3]")))
+                    (By.XPATH, "//table[contains(@class, 'bids-table')]//tr[" + str(i) + "]//td[4]")))
+                bid_volume = WebDriverWait(browser, 0.1).until(ec.presence_of_element_located(\
+                    (By.XPATH, "//table[contains(@class, 'bids-table')]//tr[" + str(i) + "]//td[3]")))
                 output = {1: round(float(bid.text) * exchange_rate, 3), 2: float(bid_volume.text)}
             else:
                 output = {1: '', 2: ''}

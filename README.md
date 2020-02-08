@@ -27,7 +27,11 @@ pip install PrettyTable
 ~~~~ 
 
 #### 3- Install Chrome and Chrome Dirver Last versions
-add chrome driver to system env <br>
+Adding chrome driver to system env <br>
+~~~~
+Donwload Chromedriver and plaace it on desktop
+Add Desktop to env path no windows :
+    system advanced setting -> 
 ~~~~
 notice : check Chrome version and ChromeDriver Version are the same
 ~~~~
