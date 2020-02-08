@@ -1,9 +1,9 @@
 import telebot
 from prettytable import PrettyTable
 
-API_TOKEN = '947961339:AAGgvcMJffgrUoiscWWC_6QI6TuYaTQpGmI'
-error_report_id = '95746722'
-good_margin_report_id = '108521416'
+API_TOKEN = '-'
+error_report_id = '-'
+good_margin_report_id = '-'
 
 
 class LocalDB:

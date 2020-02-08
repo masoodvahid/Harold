@@ -31,7 +31,13 @@ Adding chrome driver to system env <br>
 ~~~~
 Donwload Chromedriver and plaace it on desktop
 Add Desktop to env path no windows :
-    system advanced setting -> 
+    system advanced setting 
+    -> add env 
+    -> path 
+    > new 
+    -> browse Desktop (or place of chromdriver)
+~~~~
+    
 ~~~~
 notice : check Chrome version and ChromeDriver Version are the same
 ~~~~
